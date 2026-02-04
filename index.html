@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload & Share - Dropbox</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0061fe;
+            --secondary-color: #003c9d;
+            --accent-color: #1083fe;
+            --light-bg: #f8fafc;
+            --dark-text: #1e293b;
+            --border-radius: 12px;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .upload-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 650px;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .upload-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+        
+        .tab-btn {
+            padding: 10px 25px;
+            border: 2px solid var(--primary-color);
+            background: white;
+            color: var(--primary-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+        
+        .upload-area {
+            border: 3px dashed var(--primary-color);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--light-bg);
+            position: relative;
+            overflow: hidden;
+            display: block;
+        }
+        
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0,97,254,0.1) 0%, transparent 70%);
+            z-index: 0;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+        
+        .upload-area-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .upload-area h4 {
+            color: var(--dark-text);
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .url-upload-area {
+            display: none;
+        }
+        
+        .url-input-container {
+            margin-top: 20px;
+        }
+        
+        .url-input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #urlInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        #urlInput:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 97, 254, 0.1);
+        }
+        
+        .url-fetch-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .url-fetch-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,97,254,0.3);
+        }
+        
+        .url-fetch-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .preview-container {
+            margin-top: 25px;
+            text-align: center;
+            position: relative;
+        }
+        
+        #imagePreview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        #imagePreview:hover {
+            transform: scale(1.05);
+        }
+        
+        .progress-container {
+            margin-top: 25px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: var(--dark-text);
+        }
+        
+        .progress-bar-container {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            border-radius: 6px;
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .share-link {
+            background: var(--light-bg);
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 25px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .share-link h5 {
+            color: var(--dark-text);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .share-link h5::before {
+            content: '🔗';
+            font-size: 20px;
+        }
+        
+        .input-group {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        
+        #shareLink {
+            border: none;
+            padding: 12px 15px;
+            font-size: 14px;
+            color: var(--dark-text);
+            background: white;
+            border-radius: 8px 0 0 8px !important;
+        }
+        
+        .copy-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 0 8px 8px 0 !important;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+            min-width: 100px;
+            z-index: 10;
+        }
+        
+        .copy-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+            z-index: -1;
+        }
+        
+        .copy-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .copy-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,97,254,0.3);
+        }
+        
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+        
+        .direct-link-container {
+            margin-top: 15px;
+        }
+        
+        #directLink {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 8px;
+            display: block;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            width: 100%;
+        }
+        
+        #directLink:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,97,254,0.4);
+            color: white;
+        }
+        
+        .new-upload-btn {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .new-upload-btn:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+        
+        .error-message {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #dc2626;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #dcfce7;
+            border-left: 4px solid #22c55e;
+            color: #166534;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .file-info {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #64748b;
+            padding: 8px 12px;
+            background: #f1f5f9;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .url-example {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #64748b;
+            text-align: left;
+        }
+        
+        .url-example strong {
+            color: var(--primary-color);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toast notification styles */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .toast-notification.show {
+            transform: translateX(0);
+        }
+        
+        .toast-notification.error {
+            border-left-color: #ef4444;
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+        }
+        
+        .cors-warning {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+            display: none;
+        }
+        
+        .cors-warning a {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+        
+        .retry-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .retry-btn:hover {
+            background: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <h2 class="text-center mb-3" style="color: var(--primary-color);">📸 Image Upload & Share</h2>
+        <p class="text-center text-muted mb-4">Upload from your device or from any URL</p>
+        
+        <!-- Upload Tabs -->
+        <div class="upload-tabs">
+            <button class="tab-btn active" id="uploadFromDeviceBtn">Upload from Device</button>
+            <button class="tab-btn" id="uploadFromUrlBtn">Upload from URL</button>
+        </div>
+        
+        <!-- Upload from Device -->
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-area-content">
+                <div class="upload-icon">⬆️</div>
+                <h4>Drag & Drop or Click to Upload</h4>
+                <p class="text-muted mb-0">Supports JPG, PNG, GIF (Max 10MB)</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+        </div>
+        
+        <!-- Upload from URL -->
+        <div class="upload-area url-upload-area" id="urlUploadArea">
+            <div class="upload-area-content">
+                <div class="upload-icon">🌐</div>
+                <h4>Paste Image URL</h4>
+                <p class="text-muted mb-0">Enter any image URL to upload</p>
+                <div class="url-input-container">
+                    <div class="url-input-group">
+                        <input 
+                            type="url" 
+                            id="urlInput" 
+                            class="form-control" 
+                            placeholder="https://example.com/image.jpg" 
+                            autocomplete="off"
+                        >
+                        <button class="url-fetch-btn" id="fetchUrlBtn">
+                            <span id="fetchBtnText">Fetch Image</span>
+                        </button>
+                    </div>
+                    <div class="url-example">
+                        <small>✅ Works with: <strong>https://picsum.photos/800/600</strong> or <strong>https://via.placeholder.com/800x600</strong></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-container">
+            <img id="imagePreview" alt="Image Preview">
+            <div class="file-info" id="fileInfo"></div>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-header">
+                <span id="progressStatus">Uploading to Dropbox...</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        <div class="cors-warning" id="corsWarning">
+            ⚠️ Some websites block external access. If fetch fails, try a different URL or use "Upload from Device" tab.
+        </div>
+        
+        <div class="share-link" id="shareLinkContainer">
+            <h5>Shareable Link</h5>
+            <div class="input-group">
+                <input type="text" id="shareLink" class="form-control" readonly>
+                <button class="copy-btn" id="copyBtn">
+                    <span id="copyBtnText">Copy</span>
+                </button>
+            </div>
+            <div class="direct-link-container">
+                <a href="#" id="directLink" class="btn" target="_blank">
+                    <span id="directLinkText">Open Image</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <button class="new-upload-btn" id="newUploadBtn" style="display: none;">
+                Upload Another Image
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div class="toast-notification" id="toastNotification">
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span id="toastMessage">Link copied to clipboard!</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ========== CONFIGURATION - REPLACE WITH YOUR DROPBOX CREDENTIALS ==========
+        const DROPBOX_CONFIG = {
+            accessToken: 'sl.u.AGSXdptm2m7og3_74nMZ9__g_lV0hUN487bXQiyPndkKRiEzH6RiNDGF0T9SambWMQipDeKCzXq2g7Qo7fkx6khMs0IaDk3ZzUK4w32Bm-0Gk68JA6kR6GSqI_7y-zqjVi4P0nQtd9cmTQ7n_M0vX452vkctVVzhVqq4u4ql3YrSAbkElhNFKDxjCj49WQtiHkRzBRlzH0BoRKNfuIN9b8MOgJWUhdVt-2wADDzSM5cyIxDA_uDeQ29bvxf0hiOzNigZN7AXhULSPiapofZ9ztBKopJcfLY9OeL6drGpUtrR11359oW1sHFaSRB3IHNvUf280hGMBEeXj5D6y-D2x-9N2FpZHSDgdDhbTbU0NU1fUtV-xt0-LpGUvRp3NkWde0An841YIjQ7re39t-ynsros7dZlH0Lzz48U5vfCFRXuzRAx93n33iZO0wi3EH2epBzCfQ9IrMeFMvmL4k-9uYUPlvGI5ZgnGQ5k9KGb087qKepHw876dye4C2UvY4ck1YzCKWF7bvN1Z8Ip0WE49agJ_-boKJGAGkCWihak_vO2W89RtfaRqYwPgFi8hBwsBjVzyTqOmVD1F6xEP6E5FM6WPrBD27ZqSxtnknfp7YDebVf-ZOIWOzh5igNcZHkV6YXR2GxGPzunmF2FsZRLJWqgZybNIsqMg5ZG9RSt1CLnZ9Ie79MjIfEthhYh2N74JJLIXWYDFFYehl76AEYStcX_xv7nWZjQeSv8YtHaKlHFPs-nAZCBU--ZYkLNNah7o81n0M-QlmBWQcoYLkAg58dE5bgO8TiqcsbXWxosZhzH63IoJba0Vy9YUzTULCujThScdYf3NKyYz1T9NyR0uzL4YG1MxIEg4KSSwLtPUKbbYnXhi8AcLhyDauC_WCvLjgfnv-u3kEWkZ8LD4iV3dT8mmTIylB5p6eS_8OFMSMgbMdJ4HjQJNwKVtiIfF3Dl_0lapUzlde3YtxQFMaiOGYixTJ2-Wm8jygaD-0bKaUYJMwx7Ld_auM3p-AQYmC4mKeT-HtVnwxJK7-wNhRPmQUPIvqdxVEcEaM82AQOTSSdE11LjGrIcqkkitOhTe84gjFc-hNtdeKDllzKsYyGLXt_tyBoxx7xexjSFQ_ev1B1acREkKgbC2qnx2SswX4jLTq5Sr3NEV_FPAHGpDVqg9C5AeC4tZ0izj1bDqcXaA6kIa5o0biyJwlVocD4dZxPQQv_6OwhN8K0VvlWcBKlkiZ_DRbRR3tsPbya0zcS6ktGLpr6FkHup4H_3sd5-LIE9XFCBxpihrJQWY07O63ME-5j73MSX0njvXZBcH3zSHlSMdA',
+            appKey: 'ban3uqfr9kdwarp',
+            uploadFolderPath: '/uploads'
+        };
+        // ===========================================================================
+
+        // Multiple CORS proxy options (fallback chain)
+        const CORS_PROXIES = [
+            'https://api.codetabs.com/v1/proxy?quest=',  // Fast and reliable
+            'https://corsproxy.io/?',                     // Good alternative
+            'https://cors-anywhere.herokuapp.com/',       // Another option
+            ''  // Direct fetch (no proxy) - for images that allow CORS
+        ];
+
+        // DOM Elements
+        const uploadArea = document.getElementById('uploadArea');
+        const urlUploadArea = document.getElementById('urlUploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const urlInput = document.getElementById('urlInput');
+        const fetchUrlBtn = document.getElementById('fetchUrlBtn');
+        const fetchBtnText = document.getElementById('fetchBtnText');
+        const imagePreview = document.getElementById('imagePreview');
+        const fileInfo = document.getElementById('fileInfo');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const progressStatus = document.getElementById('progressStatus');
+        const shareLinkContainer = document.getElementById('shareLinkContainer');
+        const shareLinkInput = document.getElementById('shareLink');
+        const directLink = document.getElementById('directLink');
+        const copyBtn = document.getElementById('copyBtn');
+        const copyBtnText = document.getElementById('copyBtnText');
+        const directLinkText = document.getElementById('directLinkText');
+        const newUploadBtn = document.getElementById('newUploadBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const toastNotification = document.getElementById('toastNotification');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+        const corsWarning = document.getElementById('corsWarning');
+        
+        // Tab buttons
+        const uploadFromDeviceBtn = document.getElementById('uploadFromDeviceBtn');
+        const uploadFromUrlBtn = document.getElementById('uploadFromUrlBtn');
+
+        // Event Listeners
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchImageFromUrl();
+        });
+        fetchUrlBtn.addEventListener('click', fetchImageFromUrl);
+        copyBtn.addEventListener('click', copyLink);
+        newUploadBtn.addEventListener('click', resetPage);
+        shareLinkInput.addEventListener('click', selectText);
+        
+        // Tab switching
+        uploadFromDeviceBtn.addEventListener('click', () => switchTab('device'));
+        uploadFromUrlBtn.addEventListener('click', () => switchTab('url'));
+
+        // Handle drag events
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#003c9d';
+            uploadArea.style.backgroundColor = '#e0e7ff';
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#0061fe';
+            uploadArea.style.backgroundColor = '#f8fafc';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#0061fe';
+            uploadArea.style.backgroundColor = '#f8fafc';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect();
+            }
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            if (tab === 'device') {
+                uploadFromDeviceBtn.classList.add('active');
+                uploadFromUrlBtn.classList.remove('active');
+                uploadArea.style.display = 'block';
+                urlUploadArea.style.display = 'none';
+            } else {
+                uploadFromDeviceBtn.classList.remove('active');
+                uploadFromUrlBtn.classList.add('active');
+                uploadArea.style.display = 'none';
+                urlUploadArea.style.display = 'block';
+            }
+        }
+
+        // Handle file selection from device
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.match('image.*')) {
+                showError('Please select an image file (JPG, PNG, GIF)');
+                return;
+            }
+            
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size exceeds 10MB limit');
+                return;
+            }
+            
+            // Show preview and file info
+            showPreview(file, file.name);
+            
+            // Upload file to Dropbox
+            uploadToDropbox(file);
+        }
+
+        // Fetch image from URL with multiple proxy fallbacks
+        async function fetchImageFromUrl() {
+            const imageUrl = urlInput.value.trim();
+            
+            if (!imageUrl) {
+                showError('Please enter an image URL');
+                urlInput.focus();
+                return;
+            }
+            
+            // Basic URL validation
+            try {
+                new URL(imageUrl);
+            } catch (e) {
+                showError('Invalid URL format');
+                return;
+            }
+            
+            // Disable button during fetch
+            fetchUrlBtn.disabled = true;
+            fetchBtnText.innerHTML = '<span class="loading-spinner"></span>Fetching...';
+            corsWarning.style.display = 'none';
+            
+            let lastError = null;
+            
+            // Try multiple proxies
+            for (let i = 0; i < CORS_PROXIES.length; i++) {
+                const proxy = CORS_PROXIES[i];
+                const urlToFetch = proxy ? proxy + encodeURIComponent(imageUrl) : imageUrl;
+                
+                try {
+                    await attemptFetch(urlToFetch, imageUrl, proxy);
+                    // Success! Exit the loop
+                    fetchUrlBtn.disabled = false;
+                    fetchBtnText.textContent = 'Fetch Image';
+                    return;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`Proxy ${i + 1} failed:`, error.message);
+                    
+                    // Show warning after first attempt
+                    if (i === 0) {
+                        corsWarning.style.display = 'block';
+                    }
+                    
+                    // Wait a bit before trying next proxy
+                    if (i < CORS_PROXIES.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+            }
+            
+            // All proxies failed
+            fetchUrlBtn.disabled = false;
+            fetchBtnText.textContent = 'Fetch Image';
+            showError(`Failed to fetch image: ${lastError?.message || 'All methods failed. Try a different URL or upload from device.'}`);
+        }
+
+        // Attempt to fetch image with timeout
+        async function attemptFetch(urlToFetch, originalUrl, proxyName) {
+            return new Promise(async (resolve, reject) => {
+                // Set timeout (10 seconds)
+                const timeoutId = setTimeout(() => {
+                    reject(new Error('Request timeout. The server is taking too long to respond.'));
+                }, 10000);
+                
+                try {
+                    // Show progress
+                    progressStatus.textContent = `📥 Fetching image${proxyName ? ' (using proxy)' : '...'} `;
+                    progressContainer.style.display = 'block';
+                    progressFill.style.width = '10%';
+                    progressText.textContent = '10%';
+                    
+                    // Fetch the image
+                    const response = await fetch(urlToFetch, {
+                        mode: proxyName ? 'cors' : 'no-cors',
+                        cache: 'no-cache'
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    progressFill.style.width = '40%';
+                    progressText.textContent = '40%';
+                    
+                    // Get the blob
+                    const blob = await response.blob();
+                    
+                    // Validate it's an image
+                    if (!blob.type.match('image.*')) {
+                        // Try to detect image type from URL if blob type is empty
+                        const detectedType = detectImageTypeFromUrl(originalUrl) || blob.type;
+                        if (!detectedType.match('image.*')) {
+                            throw new Error('URL does not point to an image');
+                        }
+                        blob.type = detectedType;
+                    }
+                    
+                    // Check file size
+                    if (blob.size > 10 * 1024 * 1024) {
+                        throw new Error('Image size exceeds 10MB limit');
+                    }
+                    
+                    progressFill.style.width = '60%';
+                    progressText.textContent = '60%';
+                    
+                    // Create a file name from URL
+                    const fileName = extractFileNameFromUrl(originalUrl, blob.type);
+                    
+                    // Convert blob to File object
+                    const file = new File([blob], fileName, { type: blob.type });
+                    
+                    // Show preview
+                    showPreview(file, fileName);
+                    
+                    // Upload to Dropbox
+                    await uploadToDropbox(file);
+                    
+                    resolve();
+                    
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    reject(error);
+                }
+            });
+        }
+
+        // Detect image type from URL extension
+        function detectImageTypeFromUrl(url) {
+            const extensionMatch = url.match(/\.([a-zA-Z]+)(?:[?#]|$)/);
+            if (extensionMatch) {
+                const ext = extensionMatch[1].toLowerCase();
+                const mimeTypes = {
+                    'jpg': 'image/jpeg',
+                    'jpeg': 'image/jpeg',
+                    'png': 'image/png',
+                    'gif': 'image/gif',
+                    'webp': 'image/webp',
+                    'bmp': 'image/bmp',
+                    'svg': 'image/svg+xml'
+                };
+                return mimeTypes[ext] || '';
+            }
+            return '';
+        }
+
+        // Extract file name from URL
+        function extractFileNameFromUrl(url, mimeType) {
+            try {
+                const parsedUrl = new URL(url);
+                let fileName = parsedUrl.pathname.split('/').pop();
+                
+                // Remove query parameters and hash
+                fileName = fileName.split('?')[0].split('#')[0];
+                
+                // If no proper filename, generate one
+                if (!fileName || fileName === '') {
+                    const timestamp = Date.now();
+                    const ext = mimeType.split('/')[1] || 'jpg';
+                    fileName = `image_${timestamp}.${ext}`;
+                }
+                
+                return fileName;
+            } catch (e) {
+                const timestamp = Date.now();
+                const ext = mimeType.split('/')[1] || 'jpg';
+                return `image_${timestamp}.${ext}`;
+            }
+        }
+
+        // Show image preview
+        function showPreview(fileOrBlob, fileName) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                
+                // Show file info
+                const size = (fileOrBlob.size / 1024 / 1024).toFixed(2);
+                fileInfo.innerHTML = `
+                    <strong>📁 ${fileName}</strong><br>
+                    <small>💾 ${size} MB • ${fileOrBlob.type}</small>
+                `;
+                fileInfo.style.display = 'block';
+            };
+            reader.readAsDataURL(fileOrBlob);
+        }
+
+        // Upload file to Dropbox
+        async function uploadToDropbox(file) {
+            // Reset UI
+            hideError();
+            hideSuccess();
+            corsWarning.style.display = 'none';
+            
+            if (progressContainer.style.display === 'none') {
+                progressContainer.style.display = 'block';
+            }
+            
+            shareLinkContainer.style.display = 'none';
+            newUploadBtn.style.display = 'none';
+            
+            try {
+                // Upload file
+                progressStatus.textContent = '📤 Uploading to Dropbox...';
+                const uploadedPath = await uploadFile(file);
+                
+                // Create shareable link
+                progressStatus.textContent = '🔗 Generating shareable link...';
+                const shareLink = await createShareableLink(uploadedPath);
+                
+                // Display shareable link
+                displayShareableLink(shareLink);
+                
+                // Show success message
+                showSuccess('Image uploaded successfully! 🎉');
+                
+            } catch (error) {
+                console.error('Upload failed:', error);
+                showError(`Upload failed: ${error.message || 'Unknown error'}`);
+            } finally {
+                progressContainer.style.display = 'none';
+            }
+        }
+
+        // Upload file to Dropbox API
+        async function uploadFile(file) {
+            const fileName = file.name;
+            const timestamp = Date.now();
+            const uniqueFileName = `${timestamp}_${fileName}`;
+            const uploadPath = `${DROPBOX_CONFIG.uploadFolderPath}/${uniqueFileName}`;
+            
+            // Create progress simulation
+            await simulateProgress(60, 85);
+            
+            const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${DROPBOX_CONFIG.accessToken}`,
+                    'Dropbox-API-Arg': JSON.stringify({
+                        path: uploadPath,
+                        mode: 'add',
+                        autorename: true,
+                        mute: false
+                    }),
+                    'Content-Type': 'application/octet-stream'
+                },
+                body: file
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error_summary || 'Upload failed');
+            }
+            
+            const result = await response.json();
+            return result.path_display;
+        }
+
+        // Create shareable link
+        async function createShareableLink(filePath) {
+            // Continue progress simulation
+            await simulateProgress(85, 95);
+            
+            // First, try to create a new shared link
+            let response = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${DROPBOX_CONFIG.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    path: filePath,
+                    settings: {
+                        requested_visibility: 'public'
+                    }
+                })
+            });
+            
+            // If link already exists, get existing shared links
+            if (!response.ok) {
+                const errorData = await response.json();
+                
+                if (errorData.error && errorData.error['.tag'] === 'shared_link_already_exists') {
+                    // Get existing shared links for this file
+                    response = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${DROPBOX_CONFIG.accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            path: filePath,
+                            direct_only: true
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const linksData = await response.json();
+                        if (linksData.links && linksData.links.length > 0) {
+                            await simulateProgress(95, 100);
+                            return linksData.links[0].url;
+                        }
+                    }
+                }
+                
+                throw new Error(errorData.error_summary || 'Failed to create shareable link');
+            }
+            
+            const result = await response.json();
+            
+            // Continue progress to 100%
+            await simulateProgress(95, 100);
+            
+            // Convert to direct download link for better viewing
+            return convertToDirectLink(result.url);
+        }
+
+        // Convert Dropbox share link to direct link
+        function convertToDirectLink(shareUrl) {
+            return shareUrl.replace('?dl=0', '?dl=1');
+        }
+
+        // Display shareable link
+        function displayShareableLink(link) {
+            shareLinkInput.value = link;
+            directLink.href = link;
+            shareLinkContainer.style.display = 'block';
+            newUploadBtn.style.display = 'block';
+            
+            // Auto-select text for easy copying
+            setTimeout(() => {
+                shareLinkInput.select();
+            }, 100);
+        }
+
+        // Simulate progress (for better UX while waiting for API response)
+        function simulateProgress(start, end) {
+            return new Promise(resolve => {
+                let progress = start;
+                const interval = setInterval(() => {
+                    progress += 1;
+                    if (progress >= end) {
+                        progress = end;
+                        clearInterval(interval);
+                        resolve();
+                    }
+                    progressFill.style.width = `${progress}%`;
+                    progressText.textContent = `${Math.round(progress)}%`;
+                }, 20);
+            });
+        }
+
+        // Copy link to clipboard
+        async function copyLink() {
+            const textToCopy = shareLinkInput.value;
+            
+            if (!textToCopy) {
+                showToast('No link to copy!', 'error');
+                return;
+            }
+            
+            try {
+                // Method 1: Modern Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(textToCopy);
+                    showToast('✓ Link copied to clipboard!', 'success');
+                } 
+                // Method 2: Fallback
+                else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = textToCopy;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-999999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    const success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    
+                    if (success) {
+                        showToast('✓ Link copied to clipboard!', 'success');
+                    } else {
+                        throw new Error('Copy command failed');
+                    }
+                }
+                
+                // Visual feedback on button
+                const originalText = copyBtnText.textContent;
+                copyBtnText.textContent = '✓ Copied!';
+                copyBtn.style.backgroundColor = '#22c55e';
+                
+                setTimeout(() => {
+                    copyBtnText.textContent = originalText;
+                    copyBtn.style.backgroundColor = '#0061fe';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showToast('✗ Failed to copy link. Please select and copy manually.', 'error');
+                showError('Failed to copy link');
+            }
+        }
+
+        // Select text when input is clicked
+        function selectText() {
+            this.select();
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            toastNotification.className = 'toast-notification';
+            
+            if (type === 'error') {
+                toastNotification.classList.add('error');
+                toastIcon.textContent = '✗';
+            } else {
+                toastIcon.textContent = '✓';
+            }
+            
+            toastNotification.classList.add('show');
+            
+            setTimeout(() => {
+                toastNotification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+            corsWarning.style.display = 'block';
+        }
+
+        // Hide error message
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        // Hide success message
+        function hideSuccess() {
+            successMessage.style.display = 'none';
+        }
+
+        // Reset page for new upload
+        function resetPage() {
+            fileInput.value = '';
+            urlInput.value = '';
+            imagePreview.style.display = 'none';
+            fileInfo.style.display = 'none';
+            shareLinkContainer.style.display = 'none';
+            newUploadBtn.style.display = 'none';
+            progressContainer.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+            hideError();
+            hideSuccess();
+            corsWarning.style.display = 'none';
+            
+            // Switch back to device upload tab
+            switchTab('device');
+        }
+
+        // Initialize page
+        window.addEventListener('load', () => {
+            // Check if access token is configured
+            if (DROPBOX_CONFIG.accessToken === 'YOUR_DROPBOX_ACCESS_TOKEN_HERE') {
+                showError('⚠️ Please configure your Dropbox access token in the code');
+            }
+        });
+    </script>
+</body>
+</html>
